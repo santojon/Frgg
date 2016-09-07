@@ -25,6 +25,19 @@
     }
 
     /**
+     * Remove Frigga scripts after all is done
+     * @param script: a list with all scripts in page to analyse
+     */
+    cleanup = function(script) {
+        for(i = 0; i < script.length; i++) {
+            if(script[i].type == 'text/frigga') {
+                parent = script[i].parentNode;
+                parent.removeChild(script[i]);
+            }
+        }
+    }
+
+    /**
      * Compiles the text/frigga templates and add to page
      */
     compileTemplates = function() {
@@ -32,20 +45,18 @@
         var i, src = [], elem;
         for(i = 0; i < script.length; i++) {
             if(script[i].type == 'text/frigga') {
-                div = document.createElement('div');
                 elem = document.createElement('div');
                 parent = script[i].parentNode;
-                parent.insertBefore(div, script[i]);
+                parent.insertBefore(elem, script[i]);
+
                 if(script[i].src) {
                     elem.innerHTML = load(script[i].src);
-                    div.appendChild(elem);
                 } else {
                     elem.innerHTML = script[i].innerHTML;
-                    div.appendChild(elem);
                 }
-                parent.removeChild(script[i]);
             }
         }
+        cleanup(script);
     }
 
     // compile
