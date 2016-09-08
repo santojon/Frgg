@@ -54,6 +54,10 @@
                 } else {
                     elem.innerHTML = script[i].innerHTML;
                 }
+
+                while (elem.firstChild) {
+                    elem.parentNode.insertBefore(elem.firstChild,elem);
+                }
             }
         }
         cleanup(script);
