@@ -1,3 +1,78 @@
+/**
+ * Pages loader for applications
+ * @param views: a list of views names to be injected
+ * @param options: app container and loading options etc
+ */
+function Frgg(views, options) {
+    var f = this
+    var mappings = new Object()
+
+    if (!options) options = {}
+    var options = {
+        appContainer: options.appContainer || 'app',
+        autoAttach: options.autoAttach || true,
+        manualMappings: options.manualMappings || false
+    }
+
+    f.prototype = {
+        /**
+         * Init the class with data
+         */
+        init() {
+            var ff = this
+            if (views && (views instanceof Array)) {
+                views.forEach((v) => {
+                    var name = v.charAt(0).toUpperCase() + v.substring(1)
+                    ff[name] = new Function()
+                    if (options.autoAttach) ff.attach(name)
+                })
+            }
+            return ff
+        },
+
+        /**
+         * Attach page to templates definitions and set to load it when called
+         * @param page: the page name
+         * @param mapping: path to specific template file
+         */
+        attach(page, mapping) {
+            var name = page.charAt(0).toLowerCase() + page.substring(1)
+            var map = 'templates/pages/_' + name + '.frgg'
+
+            if (options.manualMappings) {
+                if (mapping) {
+                    map = mapping
+                }
+            }
+            mappings[page] = map
+
+            Object.defineProperty(this, page, {
+                get: function() {
+                    this.loadPage(page)
+                    return this['_' + page]
+                },
+                set: function(val) {
+                    this['_' + page] = val
+                }
+            })
+        },
+
+        /**
+         * Load the page template
+         * @param page: the page name
+         */
+        loadPage(page) {
+            // get app element
+            appContainer = document.getElementsByTagName(options.appContainer)[0]
+
+            // import frigga template
+            if (appContainer) appContainer.innerHTML = load(mappings[page]) || ''
+        }
+    }
+
+    return f.prototype.init()
+}
+
 // Load all automatically
 (function() {
     /**
