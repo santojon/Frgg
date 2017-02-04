@@ -1,11 +1,13 @@
 /**
  * Pages loader for applications
  * @param views: a list of views names to be injected
+ * @param container: application container
  * @param options: app container and loading options etc
  */
-function Frgg(views, options) {
+function Frgg(views, container, options) {
     var f = this
     var mappings = new Object()
+    var container = container || window
 
     if (!options) options = {}
     var options = {
@@ -36,6 +38,7 @@ function Frgg(views, options) {
          * @param mapping: path to specific template file
          */
         attach(page, mapping) {
+            var ff = this
             var name = page.charAt(0).toLowerCase() + page.substring(1)
             var map = 'templates/pages/_' + name + '.frgg'
 
@@ -46,12 +49,33 @@ function Frgg(views, options) {
             }
             mappings[page] = map
 
+            var _p = new Proxy(ff, {
+                get(target, property, receiver) {
+                    switch(property) {
+                        case page:
+                            return (params) => {
+                                // arguments accessible, after all!
+                                if (params) {
+                                    Object.keys(params).forEach((key) => {
+                                        container[key] = params[key]
+                                    })
+                                }
+                                ff.loadPage(page)
+
+                                // here you can still invoke the original method, of course
+                                target['_' + property].apply(ff, params)
+                            }
+                            break
+                    }
+                    return target['_' + property]
+                }
+            })
+
             Object.defineProperty(this, page, {
-                get: function() {
-                    this.loadPage(page)
-                    return this['_' + page]
+                get: () => {
+                    return _p[page]
                 },
-                set: function(val) {
+                set: (val) => {
                     this['_' + page] = val
                 }
             })
