@@ -146,7 +146,7 @@ function Frgg(views, container, options) {
                     for(i = 0; i < _tt.length; i++) {
                         if (_var[_tt[i]]) _var = _var[_tt[i]];
                     }
-                    if ((_var !== null) && (_var !== undefined)) {
+                    if ((_var !== null) && (_var !== undefined) && (_var !== this)) {
                         text = text.replaceAll(
                             '{{' + _t + '}}',
                             _var
