@@ -13,7 +13,7 @@ function Frgg(views, container, options) {
     var options = {
         appContainer: options.appContainer || 'app',
         autoAttach: options.autoAttach || true,
-        manualMappings: options.manualMappings || false
+        manualMappings: options.manualMappings || true
     }
 
     f.prototype = {
@@ -37,7 +37,7 @@ function Frgg(views, container, options) {
          * @param page: the page name
          * @param mapping: path to specific template file
          */
-        attach(page, mapping) {
+        attach(page, mapping, appCont) {
             var ff = this
             var name = page.charAt(0).toLowerCase() + page.substring(1)
             var map = 'templates/pages/_' + name + '.frgg'
@@ -56,18 +56,19 @@ function Frgg(views, container, options) {
                             return (params) => {
                                 // arguments accessible, after all!
                                 if (params) {
+                                    container['params'] = params
                                     Object.keys(params).forEach((key) => {
                                         container[key] = params[key]
                                     })
                                 }
-                                ff.loadPage(page)
+                                ff.loadPage(page, document.getElementsByTagName(appCont || options.appContainer)[0])
 
                                 // here you can still invoke the original method, of course
-                                target['_' + property].apply(ff, params)
+                                if (target && (target['_' + property])) target['_' + property](params)
                             }
                             break
                     }
-                    return target['_' + property]
+                    return target['_' + property] || null
                 }
             })
 
@@ -82,13 +83,21 @@ function Frgg(views, container, options) {
         },
 
         /**
+         * Attach many pages at once
+         * @param att: Attaches mappings references
+         */
+        attachAll(att) {
+            var ff = this
+            Object.keys(att).forEach((key) => {
+                ff.attach(key, att[key][0], att[key][1])
+            })
+        },
+
+        /**
          * Load the page template
          * @param page: the page name
          */
-        loadPage(page) {
-            // get app element
-            appContainer = document.getElementsByTagName(options.appContainer)[0]
-
+        loadPage(page, appContainer) {
             // import frigga template
             if (appContainer) appContainer.innerHTML = load(mappings[page]) || ''
         }
@@ -141,21 +150,93 @@ function Frgg(views, container, options) {
             tt = t.split('}}') || [t];
             tt.forEach(function(_t) {
                 if (text.includes('{{' + _t + '}}')) {
+                    _origT = _t;
+                    _v = undefined;
+                    if (_t.includes('||')) {
+                        __t = _t.split('||');
+                        _t = __t[0];
+                        _v = __t[1];
+                    }
                     _tt = _t.trim().split('.');
                     _var = this;
                     for(i = 0; i < _tt.length; i++) {
-                        if (_var[_tt[i]]) _var = _var[_tt[i]];
+                        if (_var[_tt[i]] && !(_var[_tt[i]] instanceof Node)) _var = _var[_tt[i]];
                     }
                     if ((_var !== null) && (_var !== undefined) && (_var !== this)) {
-                        text = text.replaceAll(
-                            '{{' + _t + '}}',
-                            _var
-                        );
+                        if ((_v !== null) && (_v !== undefined) && (_var instanceof String)) {
+                            text = text.replaceAll(
+                                '{{' + _origT + '}}',
+                                _v
+                            );
+                        } else {
+                            text = text.replaceAll(
+                                '{{' + _origT + '}}',
+                                _var
+                            );
+                        }
+                    } else {
+                        if ((_v !== null) && (_v !== undefined)) {
+                            console.log(_v)
+                            text = text.replaceAll(
+                                '{{' + _origT + '}}',
+                                _v
+                            );
+                        }
                     }
                 }
             });
         });
         return text;
+    }
+
+    /**
+     * Find loop syntax in text
+     * @param text: the text to find loop in
+     */
+    findLoop = function(text) {
+        __t = '';
+        s1 = '{%';
+        s2 = '%}';
+
+        /**
+         * Process code to loop inside var
+         * @param code: the code line to recognize var and keyword
+         * @param cont: container to put variables
+         * @param txt: the text template to apply variables
+         */
+        process = function(code, cont, txt) {
+            res = '';
+            _c = code.trim().split(' ');
+            if (_c[0] === 'for') {
+                if (cont[_c[3]]) {
+                    if (cont[_c[3]] instanceof Array) {
+                        cont[_c[3]].forEach(function(_cc) {
+                            cont[_c[1]] = _cc;
+                            res = res + findVars(txt);
+                        });
+                        return res;
+                    }
+                }
+            }
+            return txt;
+        }
+
+        tList = text.split(s1) || [];
+        tList.forEach(function(t) {
+            tt = t.split(s2) || [t];
+            tt.forEach(function(_t) {
+                if (_t.includes('=>')) {
+                    _tt = _t.trim().split('=>');
+                    _var = this;
+                    if (_tt.length > 1) {
+                        __t = __t + process(_tt[0], _var, _tt[1]);
+                    }
+                } else {
+                    __t = __t + _t;
+                }
+            });
+        });
+        return (__t === '') ? text : __t;
     }
 
     /**
@@ -200,6 +281,7 @@ function Frgg(views, container, options) {
      * @param text: the frgg template to be evaluated
      */
     setup = function(text) {
+        text = findLoop(text)
         text = findVars(text)
         text = translate(text)
         return text;
