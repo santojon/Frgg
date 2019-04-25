@@ -176,7 +176,6 @@ function Frgg(views, container, options) {
                         }
                     } else {
                         if ((_v !== null) && (_v !== undefined)) {
-                            console.log(_v)
                             text = text.replaceAll(
                                 '{{' + _origT + '}}',
                                 _v
@@ -215,6 +214,23 @@ function Frgg(views, container, options) {
                             res = res + findVars(txt);
                         });
                         return res;
+                    }
+                } else {
+                    if (_c[3].includes('.')) {
+                        __cc = _c[3].split('.');
+                        c_ = cont;
+
+                        __cc.forEach(function(c__) {
+                            c_ = c_[c__];
+                        });
+
+                        if (c_ instanceof Array) {
+                            c_.forEach(function(_cc) {
+                                cont[_c[1]] = _cc;
+                                res = res + findVars(txt);
+                            });
+                            return res;
+                        }
                     }
                 }
             }
